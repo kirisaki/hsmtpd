@@ -1,0 +1,4 @@
+# hsmtpd
+====
+
+Simple SMTP server.
