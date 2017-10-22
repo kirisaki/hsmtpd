@@ -18,7 +18,7 @@ data Command = ATRN | AUTH | BDAT | DATA | EHLO |
                NOOP | QUIT | RCPT | RSET | SAML |
                SEND | SOML | STARTTLS  | TURN |
                VRFY | None deriving(Eq, Ord, Show, Read, Enum)
-data SessionState = Start deriving(Eq, Show)
+data SessionState = Start | AfterEHLO | End deriving(Eq, Show)
 type Parameter = Text
 type SessionStatus = (
   Socket,

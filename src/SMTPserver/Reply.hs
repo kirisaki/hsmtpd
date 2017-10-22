@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module SMTPserver.Reply
   ( reply220
+  , reply221
   , reply250
   , reply250toEHLO
   , reply501
@@ -14,6 +15,11 @@ reply220 :: Handle -> IO()
 reply220 h = do
   hPutStr h "220 " >> getHostName >>= hPutStr h
   hPutStrLn h " ESMTP hsmtpd, service ready."
+
+reply221 :: Handle -> IO()
+reply221 h = do
+  hPutStr h "221 " >> getHostName >>= hPutStr h
+  hPutStrLn h " Nice chatting with you."
 
 reply250 :: Handle -> IO()
 reply250 h = hPutStr h "250 " >> hPutStrLn h "OK"

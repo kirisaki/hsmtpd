@@ -1,4 +1,3 @@
 # hsmtpd
-====
 
 Simple SMTP server.

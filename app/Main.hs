@@ -48,9 +48,36 @@ session  = do
   let cmd = textToCommand cmdText
   let SockAddrInet _ clientAddr = addr
   case state of
-    Start -> if params == "" || cmd == None
-             then lift $ reply501 h
-             else if cmd == EHLO || cmd == HELO
-                  then lift $ reply250toEHLO h clientAddr
-                  else lift $ reply503 h
-  session
+    Start ->
+      case (cmd, params) of
+        (RSET, _) -> doRSET
+        (QUIT, _) -> doQUIT
+        (cmd', params')
+          | (cmd' == EHLO || cmd' == HELO) && params' /= ""
+            -> do
+              lift $ reply250toEHLO h clientAddr
+              put (sock, addr, h, AfterEHLO)
+          | params' == "" -> lift $ reply501 h
+        _ -> lift $ reply503 h
+    AfterEHLO ->
+      case (cmd, params) of
+        (RSET, _) -> doRSET
+        (QUIT, _) -> doQUIT
+        (MAIL, p) -> lift $ hPutStrLn h (T.unpack p)
+      
+  (sock, addr, h, state) <- get
+  lift $ hPutStrLn h $ show state
+  if state == End
+    then return ()
+    else session
+
+doRSET :: StateT SessionStatus IO()
+doRSET = do
+  (sock, addr, h, state) <- get
+  lift $ reply250 h
+
+doQUIT :: StateT SessionStatus IO()
+doQUIT = do
+  (sock, addr, h, state) <- get
+  lift $ reply221 h
+  put (sock, addr, h, End)
