@@ -1,8 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-module SMTPserverSpec(spec)where
+module SMTPserverSpec where
 
 import Test.Hspec
+import Test.Hspec.QuickCheck
+import Test.QuickCheck
 import SMTPserver
+import Data.Text as T
 
 spec :: Spec
 spec = do
@@ -17,3 +20,14 @@ spec = do
       parseLine "ELHO klaraworks net" `shouldBe` ("ELHO", "klaraworks net")
     it "no value" $ do
       parseLine "ELHO" `shouldBe` ("ELHO", "")
+  describe "textToCommand" $ do
+    it "legal expression" $ do
+      textToCommand "MAIL" `shouldBe` MAIL
+    it "includes lowercase" $ do
+      textToCommand "Quit" `shouldBe` QUIT
+    it "between spaces" $ do
+      textToCommand " \tRSET  " `shouldBe` RSET
+    it "wrong command" $ do
+      textToCommand "voom" `shouldBe` None
+    it "illegal expression" $ do
+      textToCommand "a b c" `shouldBe` None
