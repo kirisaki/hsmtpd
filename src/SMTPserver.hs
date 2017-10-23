@@ -4,6 +4,7 @@ module SMTPserver
   , Command(..)
   , SessionStatus(..)
   , SessionState(..)
+  , SessionM
   , parseLine
   , textToCommand
   ) where
@@ -11,6 +12,7 @@ import SMTPserver.Reply
 import Data.Text as T
 import Text.Read(readMaybe)
 import System.IO
+import Control.Monad.State.Lazy(StateT)
 import Network.Socket
 
 data Command = ATRN | AUTH | BDAT | DATA | EHLO |
@@ -26,6 +28,8 @@ type SessionStatus = (
   Handle,
   SessionState
   )
+type SessionM = StateT SessionStatus IO()
+  
 textToCommand :: Text -> Command
 textToCommand t = case readMaybe $ T.unpack $ T.toUpper t of
                     Just c -> c

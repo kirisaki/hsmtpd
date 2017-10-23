@@ -1,12 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module SMTPserver.Reply
-  ( reply220
-  , reply221
-  , reply250
-  , reply250toEHLO
-  , reply501
-  , reply503
-  ) where
+module SMTPserver.Reply where
 import Network.BSD
 import Network.Socket
 import System.IO
@@ -27,9 +20,13 @@ reply250 h = hPutStr h "250 " >> hPutStrLn h "OK"
 reply250toEHLO :: Handle -> HostAddress -> IO()
 reply250toEHLO h addr = do
   hPutStr h "250 " >> getHostName >>= hPutStr h
-  entry <- getHostByAddr AF_INET addr
-  let host = hostName entry
-  hPutStr h " Hello, " >> hPutStrLn h host
+  -- it needs to process for exception
+--  entry <- getHostByAddr AF_INET addr
+--  let host = hostName entry
+  hPutStr h " Hello, " >> hPutStrLn h "test"
+
+reply500 :: Handle -> IO()
+reply500 h = hPutStrLn h "500 Syntax error, command unrecognised"
 
 reply501 :: Handle -> IO()
 reply501 h = hPutStrLn h "501 Syntax error in parameters or arguments"

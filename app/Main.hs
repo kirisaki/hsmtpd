@@ -41,43 +41,46 @@ testst = do
   lift $ print addr
   return ()
 
-session :: StateT SessionStatus IO()
+session :: SessionM
 session  = do
   (sock, addr, h, state) <- get
   (cmdText, params) <- lift $ (parseLine . T.pack) <$> hGetLine h
   let cmd = textToCommand cmdText
   let SockAddrInet _ clientAddr = addr
-  case state of
-    Start ->
-      case (cmd, params) of
-        (RSET, _) -> doRSET
-        (QUIT, _) -> doQUIT
-        (cmd', params')
-          | (cmd' == EHLO || cmd' == HELO) && params' /= ""
-            -> do
-              lift $ reply250toEHLO h clientAddr
-              put (sock, addr, h, AfterEHLO)
-          | params' == "" -> lift $ reply501 h
-        _ -> lift $ reply503 h
-    AfterEHLO ->
-      case (cmd, params) of
-        (RSET, _) -> doRSET
-        (QUIT, _) -> doQUIT
-        (MAIL, p) -> lift $ hPutStrLn h (T.unpack p)
-      
+  case (state, cmd, params) of
+    (Start, EHLO, params) -> doEHLO
+    (Start, HELO, params) -> doEHLO
+    (_, QUIT, _) -> doQUIT
+    (_, RSET, _) -> doRSET
+    (_, None, _) -> doNone
   (sock, addr, h, state) <- get
   lift $ hPutStrLn h $ show state
   if state == End
     then return ()
     else session
 
-doRSET :: StateT SessionStatus IO()
+doRSET :: SessionM
 doRSET = do
   (sock, addr, h, state) <- get
   lift $ reply250 h
+  if state /= Start
+    then put (sock, addr, h, AfterEHLO)
+    else lift $ return ()
 
-doQUIT :: StateT SessionStatus IO()
+doQUIT :: SessionM
 doQUIT = do
   (sock, addr, h, state) <- get
   lift $ reply221 h
   put (sock, addr, h, End)
+
+doNone :: SessionM
+doNone = do
+  (sock, addr, h, state) <- get
+  lift $ reply500 h
+
+doEHLO :: SessionM
+doEHLO = do
+  (sock, addr, h, state) <- get
+  let SockAddrInet _ clientAddr = addr
+  lift $ reply250toEHLO h clientAddr
+  put (sock, addr, h, AfterEHLO)
