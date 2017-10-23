@@ -35,12 +35,6 @@ mainLoop sock  = do
     evalStateT session (sock', addr, h, Start)
   mainLoop sock
 
-testst :: StateT (Socket, SockAddr, Int) IO ()
-testst = do
-  (sock, addr, a) <- get
-  lift $ print addr
-  return ()
-
 session :: SessionM
 session  = do
   (sock, addr, h, state) <- get
