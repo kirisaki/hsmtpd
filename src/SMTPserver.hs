@@ -3,7 +3,6 @@ module SMTPserver
   ( module SMTPserver.Reply
   , Command(..)
   , SessionStatus(..)
-  , SessionState(..)
   , SessionM
   , parseLine
   , textToCommand
@@ -20,14 +19,15 @@ data Command = ATRN | AUTH | BDAT | DATA | EHLO |
                NOOP | QUIT | RCPT | RSET | SAML |
                SEND | SOML | STARTTLS  | TURN |
                VRFY | None deriving(Eq, Ord, Show, Read, Enum)
-data SessionState = Start | AfterEHLO | End deriving(Eq, Show)
+type MailAdress = Text
+data SessionStatus = SessionStatus { ehlo     :: Bool
+                                   , from     :: Maybe MailAdress
+                                   , to       :: Maybe MailAdress
+                                   , sock     :: Socket
+                                   , sockaddr :: SockAddr
+                                   , handle   :: Handle
+                                   } deriving(Eq, Show)
 type Parameter = Text
-type SessionStatus = (
-  Socket,
-  SockAddr,
-  Handle,
-  SessionState
-  )
 type SessionM = StateT SessionStatus IO()
   
 textToCommand :: Text -> Command

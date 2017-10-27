@@ -32,49 +32,36 @@ mainLoop sock  = do
     hSetBuffering h NoBuffering
     hSetNewlineMode h NewlineMode{ inputNL = CRLF,
                                    outputNL = CRLF}
-    evalStateT session (sock', addr, h, Start)
+    let initialState =
+          SessionStatus{ ehlo     = False
+                       , from     = Nothing
+                       , to       = Nothing
+                       , sock     = sock'
+                       , sockaddr = addr
+                       , handle   = h
+                       }
+    reply220 h
+    evalStateT session initialState 
   mainLoop sock
 
 session :: SessionM
 session  = do
-  (sock, addr, h, state) <- get
-  (cmdText, params) <- lift $ (parseLine . T.pack) <$> hGetLine h
+  s <- get
+  (cmdText, params) <- lift $ (parseLine . T.pack) <$> hGetLine (handle s)
   let cmd = textToCommand cmdText
-  let SockAddrInet _ clientAddr = addr
-  case (state, cmd, params) of
-    (Start, EHLO, params) -> doEHLO
-    (Start, HELO, params) -> doEHLO
-    (_, QUIT, _) -> doQUIT
-    (_, RSET, _) -> doRSET
-    (_, None, _) -> doNone
-  (sock, addr, h, state) <- get
-  lift $ hPutStrLn h $ show state
-  if state == End
-    then return ()
-    else session
-
-doRSET :: SessionM
-doRSET = do
-  (sock, addr, h, state) <- get
-  lift $ reply250 h
-  if state /= Start
-    then put (sock, addr, h, AfterEHLO)
-    else lift $ return ()
-
-doQUIT :: SessionM
-doQUIT = do
-  (sock, addr, h, state) <- get
-  lift $ reply221 h
-  put (sock, addr, h, End)
-
-doNone :: SessionM
-doNone = do
-  (sock, addr, h, state) <- get
-  lift $ reply500 h
+  case () of
+    _
+      | (cmd == EHLO || cmd == HELO) && (not $ ehlo s)-> doEHLO
+      | cmd == QUIT -> doQUIT
 
 doEHLO :: SessionM
 doEHLO = do
-  (sock, addr, h, state) <- get
-  let SockAddrInet _ clientAddr = addr
-  lift $ reply250toEHLO h clientAddr
-  put (sock, addr, h, AfterEHLO)
+  s <- get
+  let SockAddrInet _ clientAddr = sockaddr s
+  lift $ reply250toEHLO (handle s) (clientAddr)
+  put $ s { ehlo = True }
+
+doQUIT :: SessionM
+doQUIT = do
+  s <- get
+  lift $ reply221 $ handle s
